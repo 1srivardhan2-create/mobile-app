@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "caffelino",
+    "slug": "caffelino-mobile",
+    "scheme": "caffelino",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.caffelino.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Caffélino uses your location to find nearby cafés."
+      }
+    },
+    "android": {
+      "package": "com.caffelino.mobile",
+      "softwareKeyboardLayoutMode": "adjustResize",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/icon.png"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Caffélino to find cafés near you."
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

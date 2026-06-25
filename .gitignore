@@ -1,0 +1,25 @@
+# Root gitignore
+node_modules/
+.env
+cloudflared.exe
+.DS_Store
+
+# React Native / Expo
+.expo/
+dist/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+android/app/build/
+ios/build/
+*.jks
+*.keystore
+
+# Server
+server/node_modules/
+server/.env
+
+# Mobile App
+caffelino-mobile/node_modules/
+caffelino-mobile/.env
+caffelino-mobile/.expo/
