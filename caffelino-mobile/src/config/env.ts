@@ -1,12 +1,8 @@
 import Constants from 'expo-constants';
 
-/** Render backend — works from real phones on Expo Go */
-const PRODUCTION_API = 'https://hydraulic-aerial-height-myself.trycloudflare.com';
-
 const extra = Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined;
 
-/** Never use localhost on a physical device — always hit Render unless overridden in .env */
-export const API_BASE_URL = PRODUCTION_API;
+/** Ensure you set EXPO_PUBLIC_API_BASE_URL before building for production (e.g., https://your-app.onrender.com) */
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || extra?.apiBaseUrl || 'https://your-render-url.onrender.com';
 
 export const SOCKET_URL = API_BASE_URL;
-

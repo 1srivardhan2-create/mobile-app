@@ -3,20 +3,53 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 const app = express();
 const port = process.env.PORT || 4000;
 
+// Configure CORS for production.
+// You can restrict this to your actual domains if you have a web frontend.
+// Since it's a mobile app, it doesn't strictly enforce CORS like browsers, 
+// but it's good practice to leave it open for the app to connect.
 app.use(cors());
 app.use(express.json());
 
 const AUTHKEY = process.env.AUTHKEY;
 const SID = process.env.SID;
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_jwt_key';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/caffelino';
 
-// In-memory mock database for users and OTPs
-const users = [];
-const otpStore = new Map(); // mobileNumber -> { otp, expiresAt }
+// Connect to MongoDB
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => {
+    console.error('❌ Failed to connect to MongoDB', err);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Check your MONGO_URI environment variable on Render.');
+    }
+  });
+
+// --- Mongoose Models ---
+
+// User Model
+const userSchema = new mongoose.Schema({
+  mobileNumber: { type: String, required: true, unique: true },
+  profileCompleted: { type: Boolean, default: false },
+  isVerified: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+const User = mongoose.model('User', userSchema);
+
+// OTP Model
+const otpSchema = new mongoose.Schema({
+  mobileNumber: { type: String, required: true },
+  otp: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, expires: 300 } // TTL index: documents expire after 300s (5 min)
+});
+const OTP = mongoose.model('OTP', otpSchema);
+
+// --- Routes ---
 
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
@@ -24,6 +57,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
     
     if (!mobileNumber) {
       return res.status(400).json({ success: false, message: 'Mobile number is required' });
+    }
+
+    if (!AUTHKEY || !SID) {
+      console.error('❌ Missing AUTHKEY or SID in environment variables.');
+      return res.status(500).json({ success: false, message: 'Server configuration error' });
     }
 
     // Generate a random 6-digit OTP
@@ -34,15 +72,18 @@ app.post('/api/auth/send-otp', async (req, res) => {
     const authKeyUrl = `https://console.authkey.io/restapi/request.php?authkey=${AUTHKEY}&mobile=${mobileNumber}&country_code=91&sid=${SID}&otp=${generatedOTP}&company=Caffelino`;
     
     console.log(`[Send OTP] Generated OTP: ${generatedOTP}`);
-    console.log(`[Send OTP] Requesting OTP for ${mobileNumber} with payload URL: ${authKeyUrl}`);
+    console.log(`[Send OTP] Requesting OTP for ${mobileNumber}...`);
     
     const response = await axios.get(authKeyUrl);
     console.log(`[Send OTP] AuthKey Response:`, response.data);
 
-    // Store OTP in memory (valid for 5 minutes)
-    otpStore.set(mobileNumber, {
-      otp: generatedOTP,
-      expiresAt: Date.now() + 5 * 60 * 1000
+    // Store OTP in MongoDB
+    // First, delete any existing OTP for this number to prevent clutter
+    await OTP.deleteMany({ mobileNumber });
+    
+    await OTP.create({
+      mobileNumber,
+      otp: generatedOTP
     });
 
     // Provide a dummy logId since we verify locally
@@ -63,20 +104,14 @@ app.post('/api/auth/verify-otp', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Mobile number, OTP, and LogID are required' });
     }
 
-    // Verify OTP locally against our in-memory store
     console.log(`[Verify OTP] Verifying OTP ${otp} for mobile ${mobileNumber}...`);
     
-    const storedData = otpStore.get(mobileNumber);
+    // Find OTP in database
+    const storedData = await OTP.findOne({ mobileNumber });
     
     if (!storedData) {
       console.error(`[Verify OTP] Verification failed: No OTP found for this number`);
       return res.status(400).json({ success: false, message: 'OTP expired or not found. Please request a new one.' });
-    }
-    
-    if (Date.now() > storedData.expiresAt) {
-      otpStore.delete(mobileNumber);
-      console.error(`[Verify OTP] Verification failed: OTP Expired`);
-      return res.status(400).json({ success: false, message: 'OTP Expired' });
     }
     
     if (storedData.otp !== otp) {
@@ -86,26 +121,24 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     // OTP is valid!
     console.log(`[Verify OTP] OTP ${otp} successfully verified!`);
-    otpStore.delete(mobileNumber); // remove OTP after successful use
-
-    // Since AuthKey format can vary slightly depending on exact plan, we assume success if no error was explicitly found 
-    // AND it has some success indication
     
-    let user = users.find(u => u.mobileNumber === mobileNumber);
+    // Remove OTP after successful use
+    await OTP.deleteOne({ _id: storedData._id });
+    
+    // Check if user exists
+    let user = await User.findOne({ mobileNumber });
     let isNewUser = false;
     
     if (!user) {
       isNewUser = true;
-      user = {
-        id: `user_${Date.now()}`,
+      user = await User.create({
         mobileNumber,
         profileCompleted: false,
         isVerified: true
-      };
-      users.push(user);
+      });
     }
 
-    const token = jwt.sign({ id: user.id, mobileNumber }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: user._id, mobileNumber }, JWT_SECRET, { expiresIn: '30d' });
 
     return res.json({
       success: true,
@@ -121,5 +154,5 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`🚀 Server running on port ${port}`);
 });
