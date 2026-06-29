@@ -18,17 +18,27 @@ app.use(express.json());
 const AUTHKEY = process.env.AUTHKEY;
 const SID = process.env.SID;
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_jwt_key';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/caffelino';
+let MONGO_URI = process.env.MONGO_URI;
 
 // Connect to MongoDB
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => {
-    console.error('❌ Failed to connect to MongoDB', err);
-    if (process.env.NODE_ENV === 'production') {
-      console.error('Check your MONGO_URI environment variable on Render.');
-    }
+async function startServer() {
+  if (!MONGO_URI) {
+    MONGO_URI = 'mongodb://localhost:27017/caffelino';
+  }
+
+  mongoose.connect(MONGO_URI)
+    .then(() => console.log('✅ Connected to MongoDB'))
+    .catch(err => {
+      console.error('❌ Failed to connect to MongoDB', err);
+      if (process.env.NODE_ENV === 'production') {
+        console.error('Check your MONGO_URI environment variable on Render.');
+      }
+    });
+
+  app.listen(port, () => {
+    console.log(`🚀 Server running on port ${port}`);
   });
+}
 
 // --- Mongoose Models ---
 
@@ -153,6 +163,4 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-});
+startServer();
