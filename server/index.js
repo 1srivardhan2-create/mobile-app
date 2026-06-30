@@ -26,14 +26,14 @@ async function startServer() {
     MONGO_URI = 'mongodb://localhost:27017/caffelino';
   }
 
-  mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Connected to MongoDB'))
-    .catch(err => {
-      console.error('❌ Failed to connect to MongoDB', err);
-      if (process.env.NODE_ENV === 'production') {
-        console.error('Check your MONGO_URI environment variable on Render.');
-      }
-    });
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log('✅ Connected to MongoDB');
+  } catch (err) {
+    console.error('❌ Failed to connect to MongoDB');
+    console.error(err.message);
+    console.error('⚠️ NOTE: You must provide a valid MONGO_URI environment variable in Render.');
+  }
 
   app.listen(port, () => {
     console.log(`🚀 Server running on port ${port}`);
