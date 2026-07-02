@@ -23,7 +23,12 @@ let MONGO_URI = process.env.MONGO_URI;
 // Connect to MongoDB
 async function startServer() {
   if (!MONGO_URI) {
-    MONGO_URI = 'mongodb://localhost:27017/caffelino';
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongoServer = await MongoMemoryServer.create();
+    MONGO_URI = mongoServer.getUri();
+    console.log(`\n\n---------------------------------------------------------`);
+    console.log(`🟡 RUNNING LOCALLY WITH MONGODB MEMORY SERVER`);
+    console.log(`---------------------------------------------------------\n`);
   }
 
   try {
