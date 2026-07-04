@@ -158,7 +158,10 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     return res.json({
       success: true,
       token,
-      user,
+      user: {
+        ...user.toJSON(),
+        id: user._id.toString()
+      },
       isNewUser
     });
 
