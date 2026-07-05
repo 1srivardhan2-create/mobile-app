@@ -171,4 +171,71 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   }
 });
 
+// Mock Cafes Data
+const mockCafes = [
+  {
+    _id: "65b1234567890abcdef12345",
+    Name: "The Coffee Bean",
+    Cafe_Address: "123 Espresso Lane, Coffee City",
+    latitude: 17.3850,
+    longitude: 78.4867,
+    Average_Cost: 350,
+    AboutCafe: "A cozy place for your daily coffee.",
+    rating: 4.5,
+    verified: true,
+    openNow: true,
+    Cafe_photos: ["https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=500&q=60"]
+  },
+  {
+    _id: "65b1234567890abcdef12346",
+    Name: "Java House",
+    Cafe_Address: "456 Latte Blvd, Brew Town",
+    latitude: 17.3855,
+    longitude: 78.4870,
+    Average_Cost: 250,
+    AboutCafe: "Strong brews and fast Wi-Fi.",
+    rating: 4.2,
+    verified: true,
+    openNow: true,
+    Cafe_photos: ["https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=500&q=60"]
+  },
+  {
+    _id: "65b1234567890abcdef12347",
+    Name: "Brewed Awakening",
+    Cafe_Address: "789 Mocha St, Beanville",
+    latitude: 17.3900,
+    longitude: 78.4900,
+    Average_Cost: 300,
+    AboutCafe: "Awaken your senses.",
+    rating: 4.8,
+    verified: true,
+    openNow: true,
+    Cafe_photos: ["https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=500&q=60"]
+  }
+];
+
+app.get('/api/cafe/approved', async (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 20;
+    return res.json({
+      success: true,
+      cafes: mockCafes.slice(0, limit),
+      totalCount: mockCafes.length
+    });
+  } catch (error) {
+    console.error('Error fetching approved cafes:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch cafes' });
+  }
+});
+
+app.get('/api/cafe/public/detail/:id', async (req, res) => {
+  try {
+    const cafe = mockCafes.find(c => c._id === req.params.id) || mockCafes[0];
+    return res.json({ success: true, cafe });
+  } catch (error) {
+    console.error('Error fetching cafe detail:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch cafe' });
+  }
+});
+
 startServer();
